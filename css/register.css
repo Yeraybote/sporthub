@@ -1,0 +1,107 @@
+/* Reseteo básico de márgenes y padding */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background-color: white; /* #002c49; */
+}
+
+/* Contenedor principal */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
+    text-align: center;
+}
+
+/* Estilo para el logo */
+.logo-container {
+    margin-top: 0px;
+}
+
+.logo {
+    width: 250px;  /* Ajusta el tamaño del logo como desees */
+    height: auto;
+}
+
+/* Estilo para el formulario */
+.form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.iniciar {
+    color: white;
+    font-size: 34px;
+    margin-bottom: 10px;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+}
+
+input {
+    width: 250px;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+select {
+    width: 250px;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: white; /* Color de fondo del select */
+}
+
+
+button {
+    width: 250px;
+    padding: 10px;
+    margin: 10px;
+    background-color: #fa6502;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #cf2401;
+}
+
+
+/* Estilo para el container en dispositivos con pantalla como portatil etc */
+@media (min-width: 768px) {
+
+    .logo-container {
+        margin-top: 4%;
+        margin-bottom: -50px;
+    }
+
+    .form-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Dos columnas de igual tamaño */
+        gap: 15px; /* Espacio entre columnas */
+        max-width: 600px; /* Ancho máximo del formulario */
+        margin: auto;
+    }
+
+    .form-container input,
+    .form-container button {
+        width: 100%; /* Que los inputs y botones ocupen su columna completa */
+    }
+
+    .form-container h1 {
+        grid-column: span 2; /* Para que el título ocupe las dos columnas */
+        text-align: center;
+    }
+}
