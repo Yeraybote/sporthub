@@ -86,24 +86,9 @@ onAuthStateChanged(auth, (user) => {
           const eventosPublicos = Object.values(eventos).filter(evento => !evento.privado); // Filtrar eventos públicos
 
           // Mostrar los eventos en la interfaz
-          const eventosContainer = document.getElementById("eventos-lista");
-
-          console.log("Eventos públicos:", eventosPublicos); // Verifica los eventos obtenidos
-
-          eventosPublicos.forEach(evento => {
-            // Quiero que los eventos se muesren en cards dentro del div con id "eventos-lista"
-            const eventoCard = document.createElement("div");
-            eventoCard.className = "evento-card";
-            eventoCard.innerHTML = `
-              <h3>${evento.nombre}</h3>
-              <p>${evento.descripcion}</p>
-              <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
-              <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
-              <p><strong>Creador:</strong> ${evento.creador}</p>
-            `;
-            eventosContainer.appendChild(eventoCard);
+            generarEventosCards(eventosPublicos); // Llamar a la función para generar las cards de eventos
             
-          });
+          
         } else {
           console.log("No hay eventos disponibles.");
         }
@@ -170,6 +155,8 @@ formCrearEvento.addEventListener("submit", async (e) => {
     const hora = document.getElementById("hora").value;
     const ubicacion = document.getElementById("ubicacion").value;
     const privado = document.getElementById("privado").checked;
+    const maxParticipantes = document.getElementById("maxParticipantes").value;
+    const deporte = document.getElementById("deporte").value; // Obtener el deporte seleccionado
 
     // Validar que todos los campos estén completos
     if (!nombre || !fecha || !hora || !ubicacion) {
@@ -189,12 +176,14 @@ formCrearEvento.addEventListener("submit", async (e) => {
         const nuevoEventoRef = ref(database, 'eventos/' + Date.now()); // Usar timestamp como ID único
         set(nuevoEventoRef, {
             nombre: nombre,
+            deporte: deporte, // Guardar el deporte seleccionado
             descripcion: descripcion,
             fecha: fecha,
             hora: hora,
             ubicacion: ubicacion,
             creador: user.uid, // Guardar el ID del usuario creador
             privado: privado,
+            maxParticipantes: maxParticipantes ? parseInt(maxParticipantes) : null, // Convertir a número si se proporciona
             participantes: [user.uid] // Iniciar con el creador como participante
         })
         .then(() => {
@@ -221,3 +210,86 @@ formCrearEvento.addEventListener("submit", async (e) => {
         });
     }
 });
+
+// 🔹 Evento de cuando cambie el select de filtroDeporte
+document.getElementById("filtroDeporte").addEventListener("change", function() {
+    const deporteSeleccionado = this.value;
+    const eventosContainer = document.getElementById("eventos-lista");
+    eventosContainer.innerHTML = ""; // Limpiar la lista de eventos
+
+    const filtroFecha = document.getElementById("filtroFecha").value;
+
+    // Obtener todos los eventos
+    const eventosRef = ref(database, 'eventos');
+
+    get(eventosRef)
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const eventos = snapshot.val();
+          const eventosFiltrados = Object.values(eventos).filter(evento => 
+            !evento.privado && (deporteSeleccionado === "" || evento.deporte === deporteSeleccionado) && (!filtroFecha || evento.fecha === filtroFecha)
+          );
+
+          // Mostrar los eventos filtrados
+          generarEventosCards(eventosFiltrados); // Llamar a la función para generar las cards de eventos
+
+        } else {
+          console.log("No hay eventos disponibles.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error al obtener los eventos:", error);
+      });
+});
+
+// 🔹 Evento de cuando cambie el input de filtroFecha
+document.getElementById("filtroFecha").addEventListener("change", function() {
+    const filtroFecha = this.value;
+    const eventosContainer = document.getElementById("eventos-lista");
+    eventosContainer.innerHTML = ""; // Limpiar la lista de eventos
+
+    const deporteSeleccionado = document.getElementById("filtroDeporte").value;
+
+    // Obtener todos los eventos
+    const eventosRef = ref(database, 'eventos');
+
+    get(eventosRef)
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const eventos = snapshot.val();
+          const eventosFiltrados = Object.values(eventos).filter(evento => 
+            !evento.privado && (deporteSeleccionado === "" || evento.deporte === deporteSeleccionado) && (!filtroFecha || evento.fecha === filtroFecha)
+          );
+
+          // Mostrar los eventos filtrados
+          generarEventosCards(eventosFiltrados); // Llamar a la función para generar las cards de eventos
+          
+        } else {
+          console.log("No hay eventos disponibles.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error al obtener los eventos:", error);
+      });
+});
+
+// Función crear los eventos reutilizable
+function generarEventosCards(eventos) {
+    const eventosContainer = document.getElementById("eventos-lista");
+    eventosContainer.innerHTML = ""; // Limpiar la lista de eventos
+
+    eventos.forEach(evento => {
+        const eventoCard = document.createElement("div");
+        eventoCard.className = "evento-card";
+        eventoCard.innerHTML = `
+            <h3>${evento.nombre}</h3>
+            <p>${evento.descripcion}</p>
+            <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
+            <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
+            <p><strong>Participantes:</strong> ${evento.participantes ? evento.participantes.length : 0} / ${evento.maxParticipantes || "∞"}</p>
+            <button class="btn unirse"><b>Unirse</b></button>
+            <button class="btn detalles">Detalles</button>
+        `;
+        eventosContainer.appendChild(eventoCard);
+    });
+}

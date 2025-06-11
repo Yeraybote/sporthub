@@ -87,3 +87,28 @@ body {
     background-color: #cf2401;
     border: none;
 }
+
+.evento-card {
+    margin: 10px;
+    padding: 10px;
+    border: 2px solid #cf2401;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    width: 40vh;
+}
+
+.unirse {
+    margin: 0 auto;
+    width: 50%;
+    max-width: 300px;
+    background-color: #cf2401;
+    border: 2px solid #cf2401;
+}
+
+.detalles {
+    margin: 0 auto;
+    width: 48%;
+    max-width: 300px;
+    background-color: #f8f9fa;
+    border: 2px solid #cf2401;
+}

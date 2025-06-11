@@ -34,15 +34,33 @@
       <div class="container-fluid">
 
          <!-- Eventos page -->
-         <div id="page-eventos" class="active align-items-center group-container">
-            
-            <!-- Eventos page -->
-<div id="eventos-lista" class="active align-items-center group-container">
-</div>
+        <div id="page-eventos" class="active align-items-center group-container">
 
+            <!-- Filtros deporte y fecha -->
+            <div class="form-container">
+                <div class="form-row">
+                    <div class="col">
+                        <select class="form-control" id="filtroDeporte">
+                            <option value="" selected>Todos</option>
+                            <option>Pádel</option>
+                            <option>Fútbol</option>
+                            <option>Running</option>
+                            <option>Baloncesto</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <input type="date" class="form-control" id="filtroFecha">
+                    </div>
+                </div>
+            </div>
 
             
-         </div>
+            <!-- Cards eventos -->
+            <div id="eventos-lista" class="active align-items-center group-container">
+            </div>
+
+        </div>
 
          <!-- Crear page -->
          <div id="page-crear" class="inactive container">
@@ -54,7 +72,7 @@
                 <div class="form-group mt-2">
                 <label for="deporte">Deporte</label>
                 <select class="form-control" id="deporte" required>
-                    <option value="" disabled selected>Selecciona un deporte</option>
+                    <option value="todos" disabled selected>Selecciona un deporte</option>
                     <option>Pádel</option>
                     <option>Fútbol</option>
                     <option>Running</option>
