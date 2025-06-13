@@ -82,11 +82,17 @@ onAuthStateChanged(auth, (user) => {
     get(eventosRef)
       .then((snapshot) => {
         if (snapshot.exists()) {
-          const eventos = snapshot.val();
-          const eventosPublicos = Object.values(eventos).filter(evento => !evento.privado); // Filtrar eventos públicos
+            const eventos = snapshot.val();
+            const eventosPublicos = Object.values(eventos).filter(evento => !evento.privado); // Filtrar eventos públicos
 
-          // Mostrar los eventos en la interfaz
+            // Mostrar los eventos en la interfaz
             generarEventosCards(eventosPublicos); // Llamar a la función para generar las cards de eventos
+
+            // Ahora recogemos los eventos en los que el usuario está participando
+            const eventosParticipando = Object.values(eventos).filter(evento => 
+              evento.participantes && evento.participantes.includes(user.uid)
+            );
+            console.log("Eventos en los que estás participando:", eventosParticipando);
             
           
         } else {
@@ -263,7 +269,7 @@ document.getElementById("filtroFecha").addEventListener("change", function() {
 
           // Mostrar los eventos filtrados
           generarEventosCards(eventosFiltrados); // Llamar a la función para generar las cards de eventos
-          
+
         } else {
           console.log("No hay eventos disponibles.");
         }
@@ -281,13 +287,15 @@ function generarEventosCards(eventos) {
     eventos.forEach(evento => {
         const eventoCard = document.createElement("div");
         eventoCard.className = "evento-card";
+
+        // Si participo en el evento, añadir un icono de check al lado del nombre en lugar del botón "Unirse"
         eventoCard.innerHTML = `
-            <h3>${evento.nombre}</h3>
+            <h3>${evento.nombre} <span class="check-icon">${evento.participantes && evento.participantes.includes(auth.currentUser.uid) ? '✔️' : ''}</span></h3> 
             <p>${evento.descripcion}</p>
             <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
             <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
             <p><strong>Participantes:</strong> ${evento.participantes ? evento.participantes.length : 0} / ${evento.maxParticipantes || "∞"}</p>
-            <button class="btn unirse"><b>Unirse</b></button>
+            <button class="btn unirse" ${evento.participantes && evento.participantes.includes(auth.currentUser.uid) ? 'hidden disabled btn-succes' : ''}>${evento.participantes && evento.participantes.includes(auth.currentUser.uid) ? '✔️' : 'Unirse'}</button>
             <button class="btn detalles">Detalles</button>
         `;
         eventosContainer.appendChild(eventoCard);
