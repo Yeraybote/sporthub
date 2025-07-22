@@ -83,7 +83,18 @@ onAuthStateChanged(auth, (user) => {
       .then((snapshot) => {
         if (snapshot.exists()) {
             const eventos = snapshot.val();
-            const eventosPublicos = Object.values(eventos).filter(evento => !evento.privado); // Filtrar eventos públicos
+            const hoy = new Date().toISOString().split("T")[0]; // formato "YYYY-MM-DD"
+
+            const eventosPublicos = Object.entries(eventos)
+              .filter(([id, evento]) => {
+                return (
+                  !evento.privado &&
+                  evento.fecha &&
+                  evento.fecha >= hoy // solo hoy o fechas futuras
+                );
+              })
+              .map(([id, evento]) => ({ ...evento, id }));
+
 
             // Mostrar los eventos en la interfaz
             generarEventosCards(eventosPublicos); // Llamar a la función para generar las cards de eventos
@@ -150,7 +161,6 @@ document.getElementById("logout").addEventListener("click", async () => {
 
 
 /* 🔹 Función para crear un nuevo evento */
-
 const formCrearEvento = document.getElementById("form-crear-evento");
 formCrearEvento.addEventListener("submit", async (e) => {
     e.preventDefault(); // Evita el envío del formulario por defecto
@@ -179,8 +189,10 @@ formCrearEvento.addEventListener("submit", async (e) => {
 
     if (user) {
         // Crear un nuevo evento en la base de datos
+        const eventoId = Date.now(); // Generamos ID único
         const nuevoEventoRef = ref(database, 'eventos/' + Date.now()); // Usar timestamp como ID único
         set(nuevoEventoRef, {
+            id: eventoId, // Guardar el ID único del evento
             nombre: nombre,
             deporte: deporte, // Guardar el deporte seleccionado
             descripcion: descripcion,
@@ -282,22 +294,175 @@ document.getElementById("filtroFecha").addEventListener("change", function() {
 // Función crear los eventos reutilizable
 function generarEventosCards(eventos) {
     const eventosContainer = document.getElementById("eventos-lista");
-    eventosContainer.innerHTML = ""; // Limpiar la lista de eventos
+    eventosContainer.innerHTML = ""; // Limpiar lista
 
     eventos.forEach(evento => {
         const eventoCard = document.createElement("div");
         eventoCard.className = "evento-card";
 
-        // Si participo en el evento, añadir un icono de check al lado del nombre en lugar del botón "Unirse"
+        const eventoId = evento.id;
+        const yaInscrito = evento.participantes && evento.participantes.includes(auth.currentUser.uid);
+
         eventoCard.innerHTML = `
-            <h3>${evento.nombre} <span class="check-icon">${evento.participantes && evento.participantes.includes(auth.currentUser.uid) ? '✔️' : ''}</span></h3> 
+            <h3>${evento.nombre} <span class="check-icon">${yaInscrito ? '✔️' : ''}</span></h3> 
             <p>${evento.descripcion}</p>
             <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
             <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
             <p><strong>Participantes:</strong> ${evento.participantes ? evento.participantes.length : 0} / ${evento.maxParticipantes || "∞"}</p>
-            <button class="btn unirse" ${evento.participantes && evento.participantes.includes(auth.currentUser.uid) ? 'hidden disabled btn-succes' : ''}>${evento.participantes && evento.participantes.includes(auth.currentUser.uid) ? '✔️' : 'Unirse'}</button>
-            <button class="btn detalles">Detalles</button>
+            <button class="btn unirse" data-id="${eventoId}" ${yaInscrito ? 'disabled' : ''}>${yaInscrito ? '✔️' : 'Unirse'}</button>
+            <a href="detalle.html?id=${eventoId}" class="btn detalles">Detalles</a>
         `;
         eventosContainer.appendChild(eventoCard);
     });
+
+    // Listeners para los botones "Unirse"
+    document.querySelectorAll(".btn.unirse").forEach(btn => {
+        btn.addEventListener("click", async function () {
+            const eventoId = this.dataset.id;
+            if (!eventoId) return;
+            await unirseAlEvento(eventoId);
+        });
+    });
+
+    // Listeners para los botones "Detalles"
+    document.querySelectorAll(".btn.detalles").forEach(btn => {
+    btn.addEventListener("click", async function () {
+
+      console.log("Detalles del evento");
+        const eventoId = this.dataset.id;
+        const snapshot = await get(ref(database, "eventos/" + eventoId));
+
+        if (!snapshot.exists()) return;
+
+        const evento = snapshot.val();
+        evento.id = eventoId;
+
+        mostrarDetalleEvento(evento);
+    });
+});
+}
+
+
+async function unirseAlEvento(eventoId) {
+    const user = auth.currentUser;
+    if (!user) {
+        Swal.fire("Error", "Debes iniciar sesión para unirte a un evento.", "error");
+        return;
+    }
+
+    const eventoRef = ref(database, 'eventos/' + eventoId);
+    try {
+        const snapshot = await get(eventoRef);
+        if (!snapshot.exists()) {
+            Swal.fire("Error", "Evento no encontrado.", "error");
+            return;
+        }
+
+        const evento = snapshot.val();
+
+        if (evento.participantes && evento.participantes.includes(user.uid)) {
+            Swal.fire("Ya estás unido", "Ya formas parte de este evento.", "info");
+            return;
+        }
+
+        if (evento.maxParticipantes && evento.participantes?.length >= evento.maxParticipantes) {
+            Swal.fire("Límite alcanzado", "Este evento ya está completo.", "warning");
+            return;
+        }
+
+        const nuevosParticipantes = evento.participantes
+            ? [...evento.participantes, user.uid]
+            : [user.uid];
+
+        await update(eventoRef, {
+            participantes: nuevosParticipantes
+        });
+
+        Swal.fire("¡Unido!", "Te has unido correctamente al evento.", "success").then(() => {
+            location.reload(); // Actualizamos UI
+        });
+
+    } catch (error) {
+        console.error("Error al unirse al evento:", error);
+        Swal.fire("Error", "No se pudo unir al evento.", "error");
+    }
+};
+
+
+
+
+function mostrarDetalleEvento(evento) {
+    const detalle = document.getElementById("detalle-evento");
+    const contenido = document.getElementById("contenido-detalle");
+
+    const yaInscrito = evento.participantes && evento.participantes.includes(auth.currentUser.uid);
+
+    contenido.innerHTML = `
+        <h3>${evento.nombre}</h3>
+        <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
+        <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
+        <p><strong>Deporte:</strong> ${evento.deporte}</p>
+        <p><strong>Descripción:</strong> ${evento.descripcion || "Sin descripción"}</p>
+        <p><strong>Participantes:</strong> ${evento.participantes?.length || 0} / ${evento.maxParticipantes || "∞"}</p>
+        <button class="btn ${yaInscrito ? 'btn-danger' : 'btn-success'}" id="accion-evento">
+            ${yaInscrito ? 'Salir del evento' : 'Unirse al evento'}
+        </button>
+    `;
+
+    document.getElementById("accion-evento").addEventListener("click", () => {
+        if (yaInscrito) {
+            salirDelEvento(evento.id);
+        } else {
+            unirseAlEvento(evento.id);
+        }
+    });
+
+    // Mostrar el detalle y ocultar lista
+    document.getElementById("page-eventos").classList.add("inactive");
+    detalle.classList.remove("inactive");
+};
+
+document.getElementById("cerrar-detalle").addEventListener("click", () => {
+    document.getElementById("detalle-evento").classList.add("inactive");
+    document.getElementById("page-eventos").classList.remove("inactive");
+});
+
+
+async function salirDelEvento(eventoId) {
+    const user = auth.currentUser;
+    if (!user) {
+        Swal.fire("Error", "Debes iniciar sesión para salir del evento.", "error");
+        return;
+    }
+
+    const eventoRef = ref(database, 'eventos/' + eventoId);
+
+    try {
+        const snapshot = await get(eventoRef);
+        if (!snapshot.exists()) {
+            Swal.fire("Error", "Evento no encontrado.", "error");
+            return;
+        }
+
+        const evento = snapshot.val();
+
+        if (!evento.participantes || !evento.participantes.includes(user.uid)) {
+            Swal.fire("Info", "No estás inscrito en este evento.", "info");
+            return;
+        }
+
+        const nuevosParticipantes = evento.participantes.filter(uid => uid !== user.uid);
+
+        await update(eventoRef, {
+            participantes: nuevosParticipantes
+        });
+
+        Swal.fire("¡Saliste del evento!", "Tu inscripción ha sido cancelada.", "success").then(() => {
+            location.reload();
+        });
+
+    } catch (error) {
+        console.error("Error al salir del evento:", error);
+        Swal.fire("Error", "No se pudo salir del evento. Intenta de nuevo.", "error");
+    }
 }
