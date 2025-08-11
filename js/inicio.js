@@ -338,55 +338,66 @@ document.getElementById("filtroFecha").addEventListener("change", function() {
 });
 
 // Función crear los eventos reutilizable
+// Función crear los eventos reutilizable
 function generarEventosCards(eventos) {
-    const eventosContainer = document.getElementById("eventos-lista");
-    eventosContainer.innerHTML = ""; // Limpiar lista
+  const eventosContainer = document.getElementById("eventos-lista");
+  eventosContainer.innerHTML = ""; // Limpiar lista
 
-    eventos.forEach(evento => {
-        const eventoCard = document.createElement("div");
-        eventoCard.className = "evento-card";
+  eventos.forEach(evento => {
+    const eventoCard = document.createElement("div");
+    eventoCard.className = "evento-card";
 
-        const eventoId = evento.id;
-        const yaInscrito = evento.participantes && evento.participantes.includes(auth.currentUser.uid);
+    const eventoId = evento.id;
+    const yaInscrito = evento.participantes && evento.participantes.includes(auth.currentUser.uid);
 
-        eventoCard.innerHTML = `
-            <h3>${evento.nombre} <span class="check-icon">${yaInscrito ? '✔️' : ''}</span></h3> 
-            <p>${evento.descripcion}</p>
-            <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
-            <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
-            <p><strong>Participantes:</strong> ${evento.participantes ? evento.participantes.length : 0} / ${evento.maxParticipantes || "∞"}</p>
-            <button class="btn unirse" data-id="${eventoId}" ${yaInscrito ? 'disabled' : ''}>${yaInscrito ? '✔️' : 'Unirse'}</button>
-            <a href="detalle.html?id=${eventoId}" class="btn detalles">Detalles</a>
-        `;
-        eventosContainer.appendChild(eventoCard);
-    });
+    // badge por deporte (Bootstrap 4)
+    const badgePorDeporte = (deporte) => {
+      switch ((deporte || "").toLowerCase()) {
+        case "pádel":
+        case "padel":       return "badge-success";
+        case "fútbol":
+        case "futbol":     return "badge-primary";
+        case "running":    return "badge-warning";
+        case "baloncesto": return "badge-info";
+        case "otro":       return "badge-dark";
+        default:           return "badge-secondary";
+      }
+    };
 
-    // Listeners para los botones "Unirse"
-    document.querySelectorAll(".btn.unirse").forEach(btn => {
-        btn.addEventListener("click", async function () {
-            const eventoId = this.dataset.id;
-            if (!eventoId) return;
-            await unirseAlEvento(eventoId);
-        });
-    });
+    const claseBadge = badgePorDeporte(evento.deporte);
+    const textoDeporte = evento.deporte || "Otro";
 
-    // Listeners para los botones "Detalles"
-    document.querySelectorAll(".btn.detalles").forEach(btn => {
+    eventoCard.innerHTML = `
+      <h5 class="mb-1">
+        ${evento.nombre}
+        <span class="badge ${claseBadge} ml-2">${textoDeporte}</span>
+      </h5>
+      <p class="mb-2">${evento.descripcion || ""}</p>
+      <p class="mb-1"><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
+      <p class="mb-1"><strong>Ubicación:</strong> ${evento.ubicacion}</p>
+      <p class="mb-2"><strong>Participantes:</strong> ${evento.participantes ? evento.participantes.length : 0} / ${evento.maxParticipantes || "∞"}</p>
+
+      <button class="btn unirse" data-id="${eventoId}" ${yaInscrito ? "disabled" : ""}>
+        ${yaInscrito ? "✔️" : "Unirse"}
+      </button>
+      <a href="detalle.html?id=${eventoId}" class="btn detalles">Detalles</a>
+    `;
+    eventosContainer.appendChild(eventoCard);
+  });
+
+  // Listeners para los botones "Unirse"
+  document.querySelectorAll(".btn.unirse").forEach(btn => {
     btn.addEventListener("click", async function () {
-
-      console.log("Detalles del evento");
-        const eventoId = this.dataset.id;
-        const snapshot = await get(ref(database, "eventos/" + eventoId));
-
-        if (!snapshot.exists()) return;
-
-        const evento = snapshot.val();
-        evento.id = eventoId;
-
-        mostrarDetalleEvento(evento);
+      const eventoId = this.dataset.id;
+      if (!eventoId) return;
+      await unirseAlEvento(eventoId);
     });
-});
+  });
+
+  // (Nota: el enlace Detalles ya navega por href; si no necesitas manejo extra,
+  // podrías eliminar el listener manual de '.btn.detalles')
 }
+
 
 
 async function unirseAlEvento(eventoId) {
