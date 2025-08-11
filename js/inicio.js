@@ -160,14 +160,34 @@ function generarMisEventosCards(lista) {
     return;
   }
 
+  // función para asignar color del badge
+  const badgePorDeporte = (deporte) => {
+    switch ((deporte || "").toLowerCase()) {
+      case "pádel":
+      case "padel":       return "badge-success";
+      case "fútbol":
+      case "futbol":     return "badge-primary";
+      case "running":    return "badge-warning";
+      case "baloncesto": return "badge-info";
+      case "otro":       return "badge-dark";
+      default:           return "badge-secondary";
+    }
+  };
+
   lista.forEach(ev => {
     const card = document.createElement("div");
     card.className = "evento-card";
+
+    const claseBadge = badgePorDeporte(ev.deporte);
+    const textoDeporte = ev.deporte || "Otro";
+
     card.innerHTML = `
-      <h4 class="mb-1">${ev.nombre}</h4>
+      <h5 class="mb-1">
+        ${ev.nombre}
+        <span class="badge ${claseBadge} ml-2">${textoDeporte}</span>
+      </h5>
       <p class="mb-1"><strong>Fecha:</strong> ${ev.fecha}${ev.hora ? " a las " + ev.hora : ""}</p>
       <p class="mb-1"><strong>Ubicación:</strong> ${ev.ubicacion}</p>
-      <p class="mb-1"><strong>Deporte:</strong> ${ev.deporte || "-"}</p>
       <div class="mt-2">
         <a href="detalle.html?id=${ev.id}" class="btn btn-sm btn-outline-primary mr-2">Ver detalle</a>
         <button class="btn btn-sm btn-outline-danger salir-evento" data-id="${ev.id}">Salir</button>
@@ -184,6 +204,7 @@ function generarMisEventosCards(lista) {
     });
   });
 }
+
 
 
 
