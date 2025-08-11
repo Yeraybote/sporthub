@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>SportHub - Editar evento</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" crossorigin="anonymous" />
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Estilos propios (reutilizamos los de inicio) -->
+    <link rel="stylesheet" href="../css/inicio.css" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="../resources/sporthub-removebg.png" type="image/png" />
+
+    <script type="module" src="../js/editar.js"></script>
+  </head>
+  <body class="container py-4">
+    <div class="d-flex align-items-center mb-3">
+      <img src="../resources/sporthub-removebg.png" alt="SportHub" height="60" class="mr-2" />
+      <h3 class="mb-0">Editar evento</h3>
+    </div>
+
+    <form id="form-editar" class="card p-3 shadow-sm mx-auto" style="max-width: 720px;">
+      <div class="form-group">
+        <label for="nombre">Título</label>
+        <input id="nombre" class="form-control" required />
+      </div>
+
+      <div class="form-group mt-2">
+        <label for="deporte">Deporte</label>
+        <select id="deporte" class="form-control" required>
+          <option>Pádel</option>
+          <option>Fútbol</option>
+          <option>Running</option>
+          <option>Baloncesto</option>
+          <option>Otro</option>
+        </select>
+      </div>
+
+      <div class="form-row mt-2">
+        <div class="form-group col">
+          <label for="fecha">Fecha</label>
+          <input type="date" id="fecha" class="form-control" required />
+        </div>
+        <div class="form-group col">
+          <label for="hora">Hora</label>
+          <input type="time" id="hora" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="form-group mt-2">
+        <label for="ubicacion">Ubicación</label>
+        <input id="ubicacion" class="form-control" required />
+      </div>
+
+      <div class="form-group mt-2">
+        <label for="maxParticipantes">Máximo de participantes</label>
+        <input type="number" id="maxParticipantes" min="2" max="100" class="form-control" required />
+      </div>
+
+      <div class="form-group mt-2">
+        <label for="descripcion">Descripción</label>
+        <textarea id="descripcion" class="form-control" rows="3" placeholder="Nivel medio, traer raqueta..."></textarea>
+      </div>
+
+      <div class="form-check mt-2">
+        <input type="checkbox" id="privado" class="form-check-input" />
+        <label class="form-check-label" for="privado">Evento privado (solo con invitación)</label>
+      </div>
+
+      <div class="mt-3">
+        <button class="btn btn-primary" type="submit">Guardar cambios</button>
+        <button class="btn btn-secondary" type="button" onclick="history.back()">Cancelar</button>
+      </div>
+    </form>
+
+    <!-- Firebase + lógica inline (versión 9 modular como en el resto del proyecto) -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
+      import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
+
+      const firebaseConfig = {
+        apiKey: 'AIzaSyAfdizEASjDgOhzU1n9EVcyz-daxB1tOT0',
+        authDomain: 'sporthub-97e60.firebaseapp.com',
+        projectId: 'sporthub-97e60',
+        storageBucket: 'sporthub-97e60.firebasestorage.app',
+        messagingSenderId: '961290047608',
+        appId: '1:961290047608:web:6a54535e619ef694015d8d',
+        measurementId: 'G-EWB7RLPW7D'
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      const auth = getAuth();
+
+      const $ = (id) => document.getElementById(id);
+
+      // Acepta tanto ?eventoId=... como ?id=...
+      const params = new URLSearchParams(location.search);
+      const eventoId = params.get('eventoId') || params.get('id');
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          location.href = '../index.html';
+          return;
+        }
+        if (!eventoId) {
+          Swal.fire('Error', 'Falta el id del evento', 'error');
+          return;
+        }
+
+        const eventoRef = ref(db, 'eventos/' + eventoId);
+        const snap = await get(eventoRef);
+        if (!snap.exists()) {
+          Swal.fire('Error', 'Evento no encontrado', 'error');
+          return;
+        }
+
+        const e = snap.val();
+        if (e.creador !== user.uid) {
+          Swal.fire('Sin permisos', 'Solo el creador puede editar este evento', 'warning')
+            .then(() => (location.href = 'detalle.html?id=' + eventoId));
+          return;
+        }
+
+        // Prefill
+        $('nombre').value = e.nombre || '';
+        $('deporte').value = e.deporte || 'Otro';
+        $('fecha').value = e.fecha || '';
+        $('hora').value = e.hora || '';
+        $('ubicacion').value = e.ubicacion || '';
+        $('maxParticipantes').value = e.maxParticipantes ?? 4;
+        $('descripcion').value = e.descripcion || '';
+        $('privado').checked = !!e.privado;
+
+        $('form-editar').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+
+          // Validación rápida
+          if (!$('nombre').value.trim()) {
+            Swal.fire('Campo requerido', 'Pon un título', 'info');
+            return;
+          }
+          if (!$('fecha').value || !$('hora').value) {
+            Swal.fire('Campo requerido', 'Fecha y hora son obligatorias', 'info');
+            return;
+          }
+
+          const patch = {
+            nombre: $('nombre').value.trim(),
+            deporte: $('deporte').value,
+            fecha: $('fecha').value,
+            hora: $('hora').value,
+            ubicacion: $('ubicacion').value.trim(),
+            maxParticipantes: parseInt($('maxParticipantes').value, 10) || null,
+            descripcion: $('descripcion').value.trim(),
+            privado: $('privado').checked
+          };
+
+          try {
+            await update(eventoRef, patch);
+            Swal.fire('Guardado', 'Cambios aplicados correctamente', 'success')
+              .then(() => (location.href = 'detalle.html?id=' + eventoId));
+          } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'No se pudo guardar', 'error');
+          }
+        });
+      });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" crossorigin="anonymous"></script>
+  </body>
+</html>

@@ -67,34 +67,76 @@ onAuthStateChanged(auth, async (user) => {
   listaParticipantesHTML += "</ul>";
 
   // 🔄 Mostrar evento
-  document.getElementById("contenido-detalle").innerHTML = `
-    <h3>${evento.nombre}</h3>
-    <p><strong>Fecha:</strong> ${evento.fecha} a las ${evento.hora}</p>
-    <p><strong>Ubicación:</strong> ${evento.ubicacion}</p>
-    <p><strong>Deporte:</strong> ${evento.deporte}</p>
-    <p><strong>Descripción:</strong> ${evento.descripcion || "Sin descripción"}</p>
-    <p><strong>Participantes:</strong> ${evento.participantes?.length || 0} / ${evento.maxParticipantes || "∞"}</p>
-    ${listaParticipantesHTML}
+document.getElementById("contenido-detalle").innerHTML = `
+  <div class="card shadow-sm  overflow-hidden">
+    <div class="d-flex align-items-center justify-content-between p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div>
+          <h3 class="mb-0">${evento.nombre}</h3>
+          <div class="mt-1">
+            <span class="badge badge-primary mr-1">${evento.deporte}</span>
+            <span class="badge badge-light border">${evento.privado ? "Privado" : "Público"}</span>
+          </div>
+        </div>
+      </div>
+      <div class="text-right pr-2">
+        <div class="small text-muted">Capacidad</div>
+        <div class="h5 mb-0">${(evento.participantes?.length || 0)} / ${evento.maxParticipantes || "∞"}</div>
+      </div>
+    </div>
 
-    ${esCreador
-    ? `<div class="mt-3">
-            <button class="btn btn-info me-2" id="editar-evento">Editar evento</button>
-            <button class="btn btn-danger" id="eliminar-evento">Eliminar evento</button>
-        </div>`
-    : `<p class="text-muted">Creador: ${evento.creadorNombre || "Desconocido"}</p>`
-    }
-    <button class="btn mt-2 ${yaInscrito ? 'btn-danger' : 'btn-success'}" id="accion-evento">
-      ${yaInscrito ? 'Salir del evento' : 'Unirse al evento'}
-    </button>
-  `;
+    <div class="p-4">
+      <div class="row">
+        <div class="col-md-7">
+          <ul class="list-unstyled mb-4">
+            <li class="mb-2"><strong>📅 Fecha:</strong> ${evento.fecha} a las ${evento.hora}</li>
+            <li class="mb-2"><strong>📍 Ubicación:</strong> ${evento.ubicacion}</li>
+            <li class="mb-2"><strong>📝 Descripción:</strong> ${evento.descripcion || "Sin descripción"}</li>
+          </ul>
+
+          <div class="mb-3">
+            <div class="font-weight-bold mb-2">👥 Participantes</div>
+            <div class="list-group list-group-flush">
+              ${listaParticipantesHTML
+                .replace("<ul>","")
+                .replace("</ul>","")
+                .split("</li>").filter(Boolean).map(li =>
+                  `<div class="list-group-item px-0">${li.replace("<li>","• ")}</div>`
+                ).join("")}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-5">
+          <div class="p-3 rounded ">
+            <div class="small text-muted mb-2">Acciones</div>
+
+            ${esCreador ? `
+              <div class="btn-group btn-group-sm mb-2 d-flex" role="group" aria-label="Acciones del creador">
+                <button class="btn btn-outline-info" id="editar-evento">Editar</button>
+                <button class="btn btn-outline-danger" id="eliminar-evento">Eliminar</button>
+              </div>
+            ` : `
+              <p class="text-muted small mb-2">Creador: ${evento.creadorNombre || "Desconocido"}</p>
+            `}
+
+            <button class="btn btn-${yaInscrito ? 'danger' : 'success'} btn-block" id="accion-evento">
+              ${yaInscrito ? 'Salir del evento' : 'Unirse al evento'}
+            </button>
+
+            <button class="btn btn-secondary btn-block mt-2" id="volver-btn">← Volver</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
 
   if (esCreador) {
   document.getElementById("editar-evento").addEventListener("click", () => {
-    Swal.fire({
-      icon: "info",
-      title: "Función en desarrollo",
-      text: "Pronto podrás editar el evento."
-    });
+    // Redirige a la página de edición con el ID del evento como parámetro en la URL
+    window.location.href = `editar.html?eventoId=${evento.id}`;
   });
 
   document.getElementById("eliminar-evento").addEventListener("click", async () => {
@@ -148,4 +190,18 @@ onAuthStateChanged(auth, async (user) => {
       title: yaInscrito ? "¡Saliste del evento!" : "¡Unido al evento!",
     }).then(() => location.reload());
   });
+
+  // Volver: si hay historial, retrocede; si no, ve a inicio.html
+const volverBtn = document.getElementById("volver-btn");
+if (volverBtn) {
+  volverBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (history.length > 1) {
+      history.back();
+    } else {
+      window.location.href = "inicio.html";
+    }
+  });
+}
+
 });

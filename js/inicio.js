@@ -99,11 +99,17 @@ onAuthStateChanged(auth, (user) => {
             // Mostrar los eventos en la interfaz
             generarEventosCards(eventosPublicos); // Llamar a la función para generar las cards de eventos
 
-            // Ahora recogemos los eventos en los que el usuario está participando
+            // Ahora recogemos los eventos activos en los que el usuario está participando
             const eventosParticipando = Object.values(eventos).filter(evento => 
-              evento.participantes && evento.participantes.includes(user.uid)
-            );
-            console.log("Eventos en los que estás participando:", eventosParticipando);
+              evento.participantes &&
+              evento.participantes.includes(user.uid) &&
+              evento.fecha && evento.fecha >= hoy // solo hoy o futuros
+            ).sort((a, b) => new Date(a.fecha) - new Date(b.fecha)); // ordenar por fecha ascendente;
+
+            console.log("Eventos activos en los que estás participando:", eventosParticipando);
+
+            generarMisEventosCards(eventosParticipando);
+            // Llamar a la función para generar las cards de eventos en los que el usuario está participando
             
           
         } else {
@@ -125,8 +131,13 @@ onAuthStateChanged(auth, (user) => {
           const usuarios = snapshot.val();
           const usuario = Object.values(usuarios)[0]; // Ya solo hay uno porque estamos filtrando por el email
 
-          // Mostrar la información del usuario en la interfaz
-          document.getElementById("titulo").innerText = "¡Bienvenid@, " + usuario.nombre + "!";
+          // Cargar y pre-rellenar el perfil
+          const $ = (id) => document.getElementById(id);
+          $("perfil-nombre").value = usuario.nombre || "";
+          $("perfil-email").value = usuario.email || user.email || "";
+          $("perfil-fecha").value = usuario.fechaNacimiento || "";
+          $("perfil-provincia").value = usuario.provincia || "";
+
         } else {
           console.log("No se encontró el usuario.");
         }
@@ -139,6 +150,41 @@ onAuthStateChanged(auth, (user) => {
     location.href = "../index.html"; // Redirige al login si no hay un usuario autenticado
   }
 });
+
+function generarMisEventosCards(lista) {
+  const cont = document.getElementById("eventos-apuntados");
+  cont.innerHTML = "";
+
+  if (!lista || lista.length === 0) {
+    cont.innerHTML = `<p class="text-muted">No estás apuntado a ningún evento.</p>`;
+    return;
+  }
+
+  lista.forEach(ev => {
+    const card = document.createElement("div");
+    card.className = "evento-card";
+    card.innerHTML = `
+      <h4 class="mb-1">${ev.nombre}</h4>
+      <p class="mb-1"><strong>Fecha:</strong> ${ev.fecha}${ev.hora ? " a las " + ev.hora : ""}</p>
+      <p class="mb-1"><strong>Ubicación:</strong> ${ev.ubicacion}</p>
+      <p class="mb-1"><strong>Deporte:</strong> ${ev.deporte || "-"}</p>
+      <div class="mt-2">
+        <a href="detalle.html?id=${ev.id}" class="btn btn-sm btn-outline-primary mr-2">Ver detalle</a>
+        <button class="btn btn-sm btn-outline-danger salir-evento" data-id="${ev.id}">Salir</button>
+      </div>
+    `;
+    cont.appendChild(card);
+  });
+
+  // Listeners para salir
+  cont.querySelectorAll(".salir-evento").forEach(btn => {
+    btn.addEventListener("click", async function () {
+      const eventoId = this.dataset.id;
+      await salirDelEvento(eventoId); // reutiliza tu función existente
+    });
+  });
+}
+
 
 
 /* 🔹 Cerrar sesión con confirmación */
@@ -465,4 +511,34 @@ async function salirDelEvento(eventoId) {
         console.error("Error al salir del evento:", error);
         Swal.fire("Error", "No se pudo salir del evento. Intenta de nuevo.", "error");
     }
-}
+};
+
+// Guardar cambios del perfil
+document.getElementById("form-perfil").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const nombre = document.getElementById("perfil-nombre").value.trim();
+  const fechaNacimiento = document.getElementById("perfil-fecha").value || null;
+  const provincia = document.getElementById("perfil-provincia").value.trim() || null;
+
+  console.log("Guardando perfil:", {
+    nombre,
+    fechaNacimiento,
+    provincia
+  });
+
+  try {
+    await update(ref(database, 'usuarios/' + user.uid), {
+      nombre,
+      fechaNacimiento,
+      provincia
+    });
+
+    Swal.fire("Guardado", "Perfil actualizado correctamente.", "success");
+  } catch (err) {
+    console.error(err);
+    Swal.fire("Error", "No se pudieron guardar los cambios.", "error");
+  }
+});

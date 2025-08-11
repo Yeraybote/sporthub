@@ -1,0 +1,22 @@
+/* Página sin desplazamiento global */
+html, body { height: 100%; margin: 0; }
+body { overflow: hidden; background: #f6f8fb; }
+
+/* Contenedor que ocupa el alto de la ventana */
+.viewport-lock {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;     /* o center si quieres centrar vertical */
+}
+
+/* La tarjeta puede hacer scroll si el contenido se pasa */
+.detalle-card {
+  width: 100%;
+  max-width: 720px;
+  margin: 24px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain; /* evita el “rebote” hacia el body */
+}
