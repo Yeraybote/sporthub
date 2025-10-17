@@ -109,14 +109,15 @@ document.getElementById("contenido-detalle").innerHTML = `
 
         <div class="col-md-5">
           <div class="p-3 rounded ">
-            <div class="small text-muted mb-2">Acciones</div>
 
             ${esCreador ? `
+            <div class="small text-muted mb-2">Acciones</div>
               <div class="btn-group btn-group-sm mb-2 d-flex" role="group" aria-label="Acciones del creador">
                 <button class="btn btn-outline-info" id="editar-evento">Editar</button>
                 <button class="btn btn-outline-danger" id="eliminar-evento">Eliminar</button>
               </div>
             ` : `
+            <div class="small text-muted mb-2"></div>
               <p class="text-muted small mb-2">Creador: ${evento.creadorNombre || "Desconocido"}</p>
             `}
 
